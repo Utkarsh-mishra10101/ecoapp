@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoQuest | Login</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@300;400;500&family=Quicksand:wght@400;600;700;800&family=Nunito:wght@400;600;700;800;900&family=Nanum+Myeongjo:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <span class="login-icon">🌿</span>
+    <div class="login-title">EcoQuest</div>
+    <div class="login-sub">Track green habits. Protect the planet.</div>
+
+    <div class="tab-toggle">
+      <button id="tabSignIn" class="active" onclick="switchTab('signin')">Sign In</button>
+      <button id="tabSignUp" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <div id="authError" class="login-error"></div>
+
+    <!-- Sign In -->
+    <div id="formSignIn">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="siPassword" placeholder="Your password" autocomplete="current-password">
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px;" id="signinBtn" onclick="doSignIn()">▶ Sign In</button>
+    </div>
+
+    <!-- Sign Up -->
+    <div id="formSignUp" style="display:none;">
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="suName" placeholder="e.g. Arjun" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password">
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px;" id="signupBtn" onclick="doSignUp()">🌱 Begin Your Quest</button>
+    </div>
+
+    <div class="login-footer" id="loginFooter">
+      Don't have an account?
+      <a href="#" onclick="switchTab('signup');return false;" style="color:var(--accent2);">Create one</a>
+    </div>
+
+    <div style="text-align:center;margin-top:18px;">
+      <button class="theme-btn" onclick="openTheme()">🎨 Choose Theme</button>
+    </div>
+  </div>
+</div>
+
+<!-- Theme Modal -->
+<div class="overlay hidden" id="themeOverlay" onclick="closeTheme(event)">
+  <div class="theme-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="theme-modal-title">✦ Choose Your World</div>
+      <button onclick="closeTheme()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;">×</button>
+    </div>
+    <div class="theme-grid" id="themeGrid"></div>
+  </div>
+</div>
+
+<script>
+  // ── Apply saved theme immediately ──────────────────────
+  applyTheme(localStorage.getItem('eq_theme') || 'retro');
+
+  // ── Auto-redirect if already logged in ─────────────────
+  (async () => {
+    const { data: { session } } = await window._sb.auth.getSession();
+    if (session) window.location.href = 'home.html';
+  })();
+
+  // ── Tab switcher ────────────────────────────────────────
+  function switchTab(tab) {
+    const s = tab === 'signin';
+    document.getElementById('formSignIn').style.display = s ? '' : 'none';
+    document.getElementById('formSignUp').style.display = s ? 'none' : '';
+    document.getElementById('tabSignIn').classList.toggle('active', s);
+    document.getElementById('tabSignUp').classList.toggle('active', !s);
+    document.getElementById('loginFooter').innerHTML = s
+      ? `Don't have an account? <a href="#" onclick="switchTab('signup');return false;" style="color:var(--accent2);">Create one</a>`
+      : `Already have an account? <a href="#" onclick="switchTab('signin');return false;" style="color:var(--accent2);">Sign in</a>`;
+    clearError();
+  }
+
+  // ── Error helpers ───────────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('authError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function clearError() {
+    document.getElementById('authError').style.display = 'none';
+  }
+
+  // ── Sign In ─────────────────────────────────────────────
+  async function doSignIn() {
+    clearError();
+    const email    = document.getElementById('siEmail').value.trim();
+    const password = document.getElementById('siPassword').value;
+    if (!email || !password) { showError('Please enter your email and password.'); return; }
+
+    const btn = document.getElementById('signinBtn');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+
+    const { data, error } = await window._sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      showError(error.message);
+      btn.disabled = false; btn.textContent = '▶ Sign In';
+      return;
+    }
+    window.location.href = 'home.html';
+  }
+
+  // ── Sign Up ─────────────────────────────────────────────
+  async function doSignUp() {
+    clearError();
+    const name     = document.getElementById('suName').value.trim();
+    const email    = document.getElementById('suEmail').value.trim();
+    const password = document.getElementById('suPassword').value;
+
+    if (!name || !email || !password) { showError('Please fill in all fields.'); return; }
+    if (password.length < 6) { showError('Password must be at least 6 characters.'); return; }
+
+    const btn = document.getElementById('signupBtn');
+    btn.disabled = true; btn.textContent = 'Creating account…';
+
+    // Step 1 — Create the Supabase auth account
+    const { data, error } = await window._sb.auth.signUp({ email, password });
+
+    if (error) {
+      showError(error.message);
+      btn.disabled = false; btn.textContent = '🌱 Begin Your Quest';
+      return;
+    }
+
+    // Step 2 — Save display name to profiles table (if user exists)
+    if (data.user) {
+      await window._sb.from('profiles').insert([{
+        id:    data.user.id,
+        email: email,
+        name:  name,
+      }]);
+      localStorage.setItem('eq_user_name', name);
+    }
+
+    // Step 3 — Redirect or show email-confirm message
+    if (data.session) {
+      window.location.href = 'home.html';
+    } else {
+      document.getElementById('formSignUp').innerHTML = `
+        <div style="text-align:center;padding:20px 0;">
+          <div style="font-size:32px;margin-bottom:12px;">📬</div>
+          <div style="font-family:var(--font-head);font-size:9px;color:var(--accent2);margin-bottom:8px;">Check Your Email</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;">
+            We sent a confirmation link to
+            <strong style="color:var(--text);">${email}</strong>.
+            Click it to activate your account, then sign in.
+          </div>
+        </div>`;
+    }
+  }
+
+  // ── Enter key shortcut ──────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const signInVisible = document.getElementById('formSignIn').style.display !== 'none';
+    if (signInVisible) doSignIn(); else doSignUp();
+  });
+</script>
+</body>
+</html>

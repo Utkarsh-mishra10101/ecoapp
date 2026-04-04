@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoQuest | Home</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@300;400;500&family=Quicksand:wght@400;600;700;800&family=Nunito:wght@400;600;700;800;900&family=Nanum+Myeongjo:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">✦ EcoQuest</div>
+    <div class="logo-sub">green daily quest</div>
+  </div>
+  <div class="nav-tabs" id="mainNav" style="display:none;">
+    <a class="nav-tab" href="home.html">🏠 Home</a>
+    <a class="nav-tab" href="quiz.html">❓ Quiz</a>
+    <a class="nav-tab" href="calculator.html">🌍 Calculator</a>
+    <a class="nav-tab" href="report.html">📸 Report</a>
+  </div>
+  <div class="header-right">
+    <div class="user-pill" id="userPill" style="display:none;">👤 <strong id="hName">—</strong> &nbsp;<span class="points-badge" id="hPts">0 pts</span></div>
+    <button class="theme-btn" onclick="openTheme()">🎨 Theme</button>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" onclick="EcoAuth.logout()" style="display:none;">✕ Logout</button>
+  </div>
+</div>
+
+<div class="main fade-up">
+
+  <div class="page-header">
+    <div class="page-title">🌿 Welcome back, <span id="homeName">Eco Hero</span></div>
+    <div class="page-sub">Your green impact, one action at a time.</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card" style="animation-delay:.05s"><div class="stat-label">Eco Points</div><div class="stat-value c-green" id="stPts">0</div></div>
+    <div class="stat-card" style="animation-delay:.10s"><div class="stat-label">Tasks Today</div><div class="stat-value c-accent" id="stTasks">0</div></div>
+    <div class="stat-card" style="animation-delay:.15s"><div class="stat-label">Quizzes ✓</div><div class="stat-value c-blue" id="stQuiz">0</div></div>
+    <div class="stat-card" style="animation-delay:.20s"><div class="stat-label">Reports</div><div class="stat-value c-amber" id="stRep">0</div></div>
+  </div>
+
+  <div class="divider"><span>Activities</span></div>
+
+  <div class="home-grid">
+    <a class="home-action" href="quiz.html">
+      <div class="home-action-icon">❓</div>
+      <div class="home-action-title">Eco Quiz</div>
+      <div class="home-action-desc">10 levels, 10 questions each — from green basics to expert climate science. Earn points every round.</div>
+    </a>
+    <a class="home-action" href="calculator.html">
+      <div class="home-action-icon">🌍</div>
+      <div class="home-action-title">Carbon Calculator</div>
+      <div class="home-action-desc">Calculate your daily CO₂ footprint from transport, diet and electricity. See how you compare globally.</div>
+    </a>
+    <a class="home-action" href="report.html">
+      <div class="home-action-icon">📸</div>
+      <div class="home-action-title">Report Pollution</div>
+      <div class="home-action-desc">Click a photo of waste or pollution and report it directly to the municipality. +15 pts per report.</div>
+    </a>
+    <div class="home-action" onclick="showEcoTasks()" style="cursor:pointer;">
+      <div class="home-action-icon">✅</div>
+      <div class="home-action-title">Eco Tasks</div>
+      <div class="home-action-desc">Complete daily green habits — switch off lights, carry a reusable bag, take shorter showers. Earn points.</div>
+    </div>
+  </div>
+
+  <!-- Eco Tasks panel -->
+  <div id="ecoTasksPanel" style="display:none;margin-top:20px;">
+    <div class="divider"><span>Today's Eco Tasks</span></div>
+    <div class="tasks-summary">
+      <span style="font-size:9px;font-family:var(--font-head);color:var(--muted);">Today's Progress</span>
+      <div class="tasks-progress-bar"><div class="tasks-progress-fill" id="taskProgFill" style="width:0%"></div></div>
+      <span style="font-size:9px;font-family:var(--font-head);color:var(--accent2);" id="taskProgText">0 / 0</span>
+    </div>
+    <div id="taskList" class="task-list"></div>
+  </div>
+
+</div>
+
+<!-- Theme Modal -->
+<div class="overlay hidden" id="themeOverlay" onclick="closeTheme(event)">
+  <div class="theme-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="theme-modal-title">✦ Choose Your World</div>
+      <button onclick="closeTheme()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;">×</button>
+    </div>
+    <div class="theme-grid" id="themeGrid"></div>
+  </div>
+</div>
+
+<script>
+const ECO_TASKS = [
+  {id:'t1', cat:'🌿 At Home',   icon:'💡', name:'Switch off lights when leaving a room',        pts:5},
+  {id:'t2', cat:'🌿 At Home',   icon:'🚿', name:'Take a short shower (under 5 mins)',            pts:5},
+  {id:'t3', cat:'🌿 At Home',   icon:'🔌', name:'Unplug chargers & electronics not in use',      pts:5},
+  {id:'t4', cat:'🌿 At Home',   icon:'♻️', name:'Segregate wet and dry waste',                   pts:8},
+  {id:'t5', cat:'🌿 At Home',   icon:'🪴', name:'Water plants with leftover drinking water',     pts:5},
+  {id:'t6', cat:'🚶 On the Go', icon:'🛍️', name:'Use a reusable bag instead of plastic',        pts:8},
+  {id:'t7', cat:'🚶 On the Go', icon:'🚶', name:'Walk or cycle for trips under 2 km',            pts:10},
+  {id:'t8', cat:'🚶 On the Go', icon:'🚌', name:'Use public transport instead of a private car', pts:10},
+  {id:'t9', cat:'🚶 On the Go', icon:'🥤', name:'Carry a reusable water bottle',                 pts:5},
+  {id:'t10',cat:'🌍 Community', icon:'🗑️', name:'Pick up litter you see in a public area',       pts:15},
+  {id:'t11',cat:'🌍 Community', icon:'🌱', name:'Plant or water a tree / plant',                  pts:12},
+  {id:'t12',cat:'🌍 Community', icon:'📢', name:'Share one eco-tip with a friend or family',      pts:8},
+  {id:'t13',cat:'🍽️ Food',      icon:'🥗', name:'Eat at least one vegetarian meal today',        pts:8},
+  {id:'t14',cat:'🍽️ Food',      icon:'🍱', name:'Avoid food waste — finish your plate',          pts:5},
+  {id:'t15',cat:'🍽️ Food',      icon:'🛒', name:'Buy local / seasonal produce',                  pts:8},
+];
+
+let taskChecks  = EcoStats.getTaskChecks();
+let tasksVisible = false;
+
+function showEcoTasks() {
+  tasksVisible = !tasksVisible;
+  document.getElementById('ecoTasksPanel').style.display = tasksVisible ? 'block' : 'none';
+  if (tasksVisible) renderTasks();
+}
+
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  let lastCat = '', done = 0;
+  ECO_TASKS.forEach(t => {
+    const chk = taskChecks[t.id] || false;
+    if (chk) done++;
+    if (t.cat !== lastCat) {
+      lastCat = t.cat;
+      const lbl = document.createElement('div');
+      lbl.className = 'task-category'; lbl.textContent = t.cat;
+      list.appendChild(lbl);
+    }
+    const row = document.createElement('div');
+    row.className = 'task-item' + (chk ? ' done' : '');
+    row.innerHTML = `<div class="task-icon">${t.icon}</div>
+      <div class="check-item-box${chk?' ck':''}" onclick="toggleTask('${t.id}',this,event)"></div>
+      <div class="task-name">${t.name}</div>
+      <div class="task-pts">${t.pts} pts</div>`;
+    list.appendChild(row);
+  });
+  const pct = Math.round((done / ECO_TASKS.length) * 100);
+  document.getElementById('taskProgFill').style.width     = pct + '%';
+  document.getElementById('taskProgText').textContent     = done + ' / ' + ECO_TASKS.length;
+  document.getElementById('stTasks').textContent          = done;
+}
+
+function toggleTask(id, el, e) {
+  e.stopPropagation();
+  const was = taskChecks[id] || false;
+  taskChecks[id] = !was;
+  const t = ECO_TASKS.find(x => x.id === id);
+  if (t) {
+    if (!was) { EcoStats.addPoints(t.pts); toast('+' + t.pts + ' pts — ' + t.name.slice(0,30) + '…', 'success'); }
+    else        EcoStats.subPoints(t.pts);
+  }
+  EcoStats.saveTaskChecks(taskChecks);
+  document.getElementById('hPts').textContent  = EcoStats.getPoints() + ' pts';
+  document.getElementById('stPts').textContent = EcoStats.getPoints();
+  renderTasks();
+}
+
+(async () => {
+  const result = await EcoAuth.initHeader('home');
+  if (!result) return;
+  document.getElementById('homeName').textContent = result.name;
+  document.getElementById('stPts').textContent    = EcoStats.getPoints();
+  document.getElementById('stTasks').textContent  = EcoStats.getTasksDone();
+  document.getElementById('stQuiz').textContent   = EcoStats.getQuizCount();
+  document.getElementById('stRep').textContent    = EcoStats.getReportCount();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoQuest | Report Pollution</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@300;400;500&family=Quicksand:wght@400;600;700;800&family=Nunito:wght@400;600;700;800;900&family=Nanum+Myeongjo:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <!-- Supabase SDK — loaded before config.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="config.js"></script>
+  <!-- EmailJS init reads key from config.js -->
+  <script>emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);</script>
+  <script src="auth.js"></script>
+  <script src="report.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">✦ EcoQuest</div>
+    <div class="logo-sub">green daily quest</div>
+  </div>
+  <div class="nav-tabs" id="mainNav" style="display:none;">
+    <a class="nav-tab" href="home.html">🏠 Home</a>
+    <a class="nav-tab" href="quiz.html">❓ Quiz</a>
+    <a class="nav-tab" href="calculator.html">🌍 Calculator</a>
+    <a class="nav-tab" href="report.html">📸 Report</a>
+  </div>
+  <div class="header-right">
+    <div class="user-pill" id="userPill" style="display:none;">👤 <strong id="hName">—</strong> &nbsp;<span class="points-badge" id="hPts">0 pts</span></div>
+    <button class="theme-btn" onclick="openTheme()">🎨 Theme</button>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" onclick="EcoAuth.logout()" style="display:none;">✕ Logout</button>
+  </div>
+</div>
+
+<div class="main fade-up">
+  <div class="page-header">
+    <div class="page-title">📸 Report Pollution</div>
+    <div class="page-sub">Photo + location → sent directly to municipality · earn +15 pts</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">New Report</div>
+
+    <input type="file" id="photoInput" accept="image/*" capture="environment"
+      style="display:none;" onchange="previewPhoto(event)">
+    <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+      <span class="photo-upload-icon">📷</span>
+      <div class="photo-upload-text">Click to take photo or upload from gallery</div>
+    </div>
+    <img id="photoPreview" class="report-preview" alt="Preview">
+
+    <div style="margin-top:14px;">
+      <div class="field">
+        <label>Area / Location description</label>
+        <input type="text" id="rLocation" placeholder="e.g. Near Sector 14 Market, Gurugram">
+      </div>
+      <div class="field">
+        <label>Type of issue</label>
+        <select id="rType">
+          <option value="Garbage dumping">🗑️ Garbage dumping</option>
+          <option value="Open drain / sewage">💧 Open drain / sewage</option>
+          <option value="Stagnant water">🦟 Stagnant water / mosquito breeding</option>
+          <option value="Air pollution">💨 Air pollution / burning waste</option>
+          <option value="Water body pollution">🏭 Water body pollution</option>
+          <option value="Plastic waste">♻️ Plastic / Non-biodegradable waste</option>
+          <option value="Hazardous">⚠️ Hazardous / Chemical waste</option>
+          <option value="Other">🔴 Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Description (optional)</label>
+        <textarea id="rDesc" rows="3" placeholder="Describe what you see — how bad is it, how long has it been there…"></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="submitBtn" onclick="submitReport()">📤 Submit to Municipality</button>
+      <button class="btn btn-ghost" onclick="clearReport()">↺ Clear</button>
+    </div>
+
+    <div style="margin-top:12px;font-size:10px;color:var(--muted);line-height:1.8;">
+      ✓ Photo uploaded to Supabase Storage<br>
+      ✓ Report saved to Supabase Database<br>
+      ✓ Email sent to municipality automatically
+    </div>
+  </div>
+
+  <div class="divider"><span>Your Recent Reports</span></div>
+  <div id="reportList"></div>
+</div>
+
+<!-- Theme Modal -->
+<div class="overlay hidden" id="themeOverlay" onclick="closeTheme(event)">
+  <div class="theme-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="theme-modal-title">✦ Choose Your World</div>
+      <button onclick="closeTheme()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;">×</button>
+    </div>
+    <div class="theme-grid" id="themeGrid"></div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  await EcoAuth.initHeader('report');
+  renderLocalReports();
+})();
+</script>
+</body>
+</html>
